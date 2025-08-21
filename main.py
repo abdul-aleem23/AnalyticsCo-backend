@@ -118,6 +118,25 @@ async def health_check():
         "api_routers": "available" if routers_available else "unavailable"
     }
 
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    if settings.environment == "development":
+        import traceback
+        return JSONResponse(
+            status_code=500,
+            content={
+                "message": "Internal server error",
+                "detail": str(exc),
+                "traceback": traceback.format_exc()
+            }
+        )
+    else:
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Internal server error"}
+        )
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))

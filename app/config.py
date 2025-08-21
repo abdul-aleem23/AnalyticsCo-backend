@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    database_url: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/qr_analytics")
+    database_url: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./app.db")
     secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     base_url: str = os.getenv("BASE_URL", "http://localhost:8000")
     environment: str = os.getenv("ENVIRONMENT", "development")
