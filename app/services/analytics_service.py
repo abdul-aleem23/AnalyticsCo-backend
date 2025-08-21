@@ -115,12 +115,15 @@ class AnalyticsService:
         return result.scalar() or 0
 
     async def _get_scans_today(self, campaign_id: str) -> int:
-        today = datetime.utcnow().date()
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        
         result = await self.db.execute(
             select(func.count(Scan.id)).where(
                 and_(
                     Scan.campaign_id == campaign_id,
-                    func.date(Scan.timestamp) == today
+                    Scan.timestamp >= today_start,
+                    Scan.timestamp < today_end
                 )
             )
         )
@@ -180,47 +183,73 @@ class AnalyticsService:
         return {row.device_type or "unknown": row.count for row in result.all()}
 
     async def _get_daily_scan_data(self, campaign_id: str, days: int = 30) -> List[Dict[str, Any]]:
-        start_date = datetime.utcnow().date() - timedelta(days=days)
-        
-        result = await self.db.execute(
-            select(
-                func.date(Scan.timestamp).label('date'),
-                func.count(Scan.id).label('count')
-            )
-            .where(
-                and_(
-                    Scan.campaign_id == campaign_id,
-                    func.date(Scan.timestamp) >= start_date
+        try:
+            start_datetime = datetime.utcnow() - timedelta(days=days)
+            
+            # Get all scans within the date range
+            result = await self.db.execute(
+                select(Scan.timestamp)
+                .where(
+                    and_(
+                        Scan.campaign_id == campaign_id,
+                        Scan.timestamp >= start_datetime
+                    )
                 )
+                .order_by(Scan.timestamp)
             )
-            .group_by(func.date(Scan.timestamp))
-            .order_by('date')
-        )
-        
-        return [
-            {"date": row.date.isoformat(), "count": row.count}
-            for row in result.all()
-        ]
+            
+            scans = result.scalars().all()
+            
+            # Group by date in Python to avoid database-specific date functions
+            daily_counts = {}
+            for scan in scans:
+                date_key = scan.date().isoformat()
+                daily_counts[date_key] = daily_counts.get(date_key, 0) + 1
+            
+            # Convert to sorted list
+            return [
+                {"date": date, "count": count}
+                for date, count in sorted(daily_counts.items())
+            ]
+            
+        except Exception as e:
+            # Return empty data if there's an error
+            print(f"Error getting daily scan data: {e}")
+            return []
 
     async def _get_hourly_scan_data(self, campaign_id: str) -> List[Dict[str, Any]]:
-        today = datetime.utcnow().date()
-        
-        result = await self.db.execute(
-            select(
-                func.extract('hour', Scan.timestamp).label('hour'),
-                func.count(Scan.id).label('count')
-            )
-            .where(
-                and_(
-                    Scan.campaign_id == campaign_id,
-                    func.date(Scan.timestamp) == today
+        try:
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_end = today_start + timedelta(days=1)
+            
+            # Get all scans from today
+            result = await self.db.execute(
+                select(Scan.timestamp)
+                .where(
+                    and_(
+                        Scan.campaign_id == campaign_id,
+                        Scan.timestamp >= today_start,
+                        Scan.timestamp < today_end
+                    )
                 )
+                .order_by(Scan.timestamp)
             )
-            .group_by(func.extract('hour', Scan.timestamp))
-            .order_by('hour')
-        )
-        
-        return [
-            {"hour": int(row.hour), "count": row.count}
-            for row in result.all()
-        ]
+            
+            scans = result.scalars().all()
+            
+            # Group by hour in Python
+            hourly_counts = {}
+            for scan in scans:
+                hour = scan.hour
+                hourly_counts[hour] = hourly_counts.get(hour, 0) + 1
+            
+            # Convert to sorted list
+            return [
+                {"hour": hour, "count": count}
+                for hour, count in sorted(hourly_counts.items())
+            ]
+            
+        except Exception as e:
+            # Return empty data if there's an error
+            print(f"Error getting hourly scan data: {e}")
+            return []
