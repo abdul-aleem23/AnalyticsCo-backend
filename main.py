@@ -140,5 +140,7 @@ async def global_exception_handler(request, exc):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    print(f"Starting server on port {port}")
+    print(f"🚀 Starting server on 0.0.0.0:{port}")
+    print(f"🌐 PORT environment variable: {os.getenv('PORT', 'NOT SET')}")
+    print(f"🔗 Expected external URL: {settings.base_url}")
     uvicorn.run("main:app", host="0.0.0.0", port=port)
