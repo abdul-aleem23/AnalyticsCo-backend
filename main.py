@@ -20,6 +20,16 @@ except Exception as e:
         base_url = os.getenv("BASE_URL", "http://localhost:8000")
     settings = Settings()
 
+# Try to import API routers - graceful fallback if they fail
+routers_available = False
+try:
+    from app.api import public, auth, admin
+    print("✅ API routers imported successfully")
+    routers_available = True
+except Exception as e:
+    print(f"⚠️ API routers import failed: {e}")
+    routers_available = False
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -65,6 +75,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include API routers if available
+if routers_available:
+    try:
+        app.include_router(public.router, tags=["Public"])
+        print("✅ Public router included")
+    except Exception as e:
+        print(f"⚠️ Failed to include public router: {e}")
+    
+    try:
+        app.include_router(auth.router, tags=["Authentication"])
+        print("✅ Auth router included")
+    except Exception as e:
+        print(f"⚠️ Failed to include auth router: {e}")
+    
+    try:
+        app.include_router(admin.router, tags=["Admin"])
+        print("✅ Admin router included")
+    except Exception as e:
+        print(f"⚠️ Failed to include admin router: {e}")
+else:
+    print("⚠️ API routers not available - running with basic endpoints only")
+
 @app.get("/")
 async def root():
     return {
@@ -82,7 +114,8 @@ async def health_check():
         "status": "healthy", 
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
         "environment": settings.environment,
-        "database": "available" if database_available else "unavailable"
+        "database": "available" if database_available else "unavailable",
+        "api_routers": "available" if routers_available else "unavailable"
     }
 
 if __name__ == "__main__":
