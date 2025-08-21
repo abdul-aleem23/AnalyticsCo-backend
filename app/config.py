@@ -3,7 +3,14 @@ from typing import Optional
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    database_url: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./app.db")
+    _database_url: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./app.db")
+    
+    @property
+    def database_url(self) -> str:
+        # Auto-fix Railway's postgresql:// URLs to use async driver
+        if self._database_url.startswith("postgresql://"):
+            return self._database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self._database_url
     secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     base_url: str = os.getenv("BASE_URL", "http://localhost:8000")
     environment: str = os.getenv("ENVIRONMENT", "development")
