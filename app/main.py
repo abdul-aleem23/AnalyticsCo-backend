@@ -13,16 +13,21 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Starting QR Analytics Platform...")
     
-    # Create database tables
-    await create_tables()
-    print("Database tables created")
+    try:
+        # Create database tables
+        await create_tables()
+        print("Database tables created")
+        
+        # Create initial admin user if none exists
+        async for db in get_database():
+            await create_initial_admin(db)
+            break
+        
+        print(f"Application started on {settings.base_url}")
+    except Exception as e:
+        print(f"Warning: Database initialization failed: {e}")
+        print("App will start without database functionality")
     
-    # Create initial admin user if none exists
-    async for db in get_database():
-        await create_initial_admin(db)
-        break
-    
-    print(f"Application started on {settings.base_url}")
     yield
     
     # Shutdown
@@ -59,7 +64,8 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
+    import datetime
+    return {"status": "healthy", "timestamp": datetime.datetime.utcnow().isoformat() + "Z"}
 
 # Global exception handler
 @app.exception_handler(Exception)
