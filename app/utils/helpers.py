@@ -1,5 +1,6 @@
 import re
-import requests
+import asyncio
+import aiohttp
 from typing import Optional
 from user_agents import parse
 
@@ -18,27 +19,45 @@ def parse_device_type(user_agent: str) -> str:
     else:
         return "unknown"
 
-def get_city_from_ip(ip_address: str) -> Optional[str]:
+async def get_city_from_ip(ip_address: str) -> Optional[str]:
+    if not ip_address or ip_address == "unknown":
+        return None
+        
     try:
-        # Using a free IP geolocation service (in production, consider using a paid service)
-        response = requests.get(f"http://ip-api.com/json/{ip_address}", timeout=2)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status") == "success":
-                return data.get("city")
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+            async with session.get(f"http://ip-api.com/json/{ip_address}") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("status") == "success":
+                        return data.get("city")
     except Exception:
+        # Don't let geolocation errors break the scan recording
         pass
     return None
 
-def get_country_from_ip(ip_address: str) -> Optional[str]:
+async def get_country_from_ip(ip_address: str) -> Optional[str]:
+    if not ip_address or ip_address == "unknown":
+        return None
+        
     try:
-        response = requests.get(f"http://ip-api.com/json/{ip_address}", timeout=2)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status") == "success":
-                return data.get("country")
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+            async with session.get(f"http://ip-api.com/json/{ip_address}") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("status") == "success":
+                        return data.get("country")
     except Exception:
+        # Don't let geolocation errors break the scan recording
         pass
+    return None
+
+# Synchronous fallback functions for backward compatibility
+def get_city_from_ip_sync(ip_address: str) -> Optional[str]:
+    """Synchronous version that doesn't make HTTP requests to avoid blocking"""
+    return None
+
+def get_country_from_ip_sync(ip_address: str) -> Optional[str]:
+    """Synchronous version that doesn't make HTTP requests to avoid blocking"""
     return None
 
 def is_valid_campaign_id(campaign_id: str) -> bool:

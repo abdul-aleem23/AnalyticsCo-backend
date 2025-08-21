@@ -33,9 +33,10 @@ class AnalyticsService:
         # Parse device type
         device_type = parse_device_type(user_agent or "")
         
-        # Get location data (async, but don't block the redirect)
-        city = get_city_from_ip(ip_address) if ip_address else None
-        country = get_country_from_ip(ip_address) if ip_address else None
+        # Skip location data for now to avoid blocking HTTP requests
+        # TODO: Implement proper async geolocation or use a background task
+        city = None
+        country = None
         
         # Create scan record
         scan = Scan(
