@@ -20,7 +20,7 @@ async def get_admin_dashboard_stats(
     stats = await campaign_service.get_admin_dashboard_stats()
     return stats
 
-@router.get("/admin/campaigns", response_model=List[CampaignResponse])
+@router.get("/admin/campaigns")
 async def get_all_campaigns(
     include_archived: bool = False,
     current_user: AdminUser = Depends(get_current_user),
@@ -82,6 +82,20 @@ async def archive_campaign(
         raise HTTPException(status_code=404, detail="Campaign not found")
     
     return {"message": "Campaign archived successfully", "campaign_id": campaign_id}
+
+@router.put("/admin/campaigns/{campaign_id}/unarchive")
+async def unarchive_campaign(
+    campaign_id: str,
+    current_user: AdminUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    campaign_service = CampaignService(db)
+    campaign = await campaign_service.unarchive_campaign(campaign_id)
+    
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    return {"message": "Campaign unarchived successfully", "campaign_id": campaign_id}
 
 @router.put("/admin/campaigns/{campaign_id}/access")
 async def toggle_client_access(

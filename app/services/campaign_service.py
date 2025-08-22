@@ -40,14 +40,48 @@ class CampaignService:
         )
         return result.scalar_one_or_none()
 
-    async def get_all_campaigns(self, include_archived: bool = False) -> List[Campaign]:
+    async def get_all_campaigns(self, include_archived: bool = False) -> List[Dict[str, Any]]:
         query = select(Campaign)
         if not include_archived:
             query = query.where(Campaign.archived == False)
         
         query = query.order_by(desc(Campaign.created_at))
         result = await self.db.execute(query)
-        return list(result.scalars().all())
+        campaigns = list(result.scalars().all())
+        
+        # Add stats to each campaign
+        campaigns_with_stats = []
+        for campaign in campaigns:
+            # Get scan statistics for this campaign
+            total_scans = await self.db.execute(
+                select(func.count(Scan.id)).where(Scan.campaign_id == campaign.campaign_id)
+            )
+            total_scans = total_scans.scalar() or 0
+
+            unique_visitors = await self.db.execute(
+                select(func.count(func.distinct(Scan.anonymous_user_id))).where(Scan.campaign_id == campaign.campaign_id)
+            )
+            unique_visitors = unique_visitors.scalar() or 0
+            
+            # Convert campaign to dict and add stats
+            campaign_dict = {
+                'id': campaign.id,
+                'campaign_id': campaign.campaign_id,
+                'business_name': campaign.business_name,
+                'target_url': campaign.target_url,
+                'description': campaign.description,
+                'created_at': campaign.created_at,
+                'active': campaign.active,
+                'client_access_enabled': campaign.client_access_enabled,
+                'archived': campaign.archived,
+                'archived_at': campaign.archived_at,
+                'total_scans': total_scans,
+                'unique_visitors': unique_visitors
+            }
+            
+            campaigns_with_stats.append(campaign_dict)
+        
+        return campaigns_with_stats
 
     async def update_campaign(self, campaign_id: str, campaign_data: CampaignUpdate) -> Optional[Campaign]:
         result = await self.db.execute(
@@ -80,6 +114,22 @@ class CampaignService:
 
         campaign.archived = True
         campaign.archived_at = datetime.utcnow()
+        
+        await self.db.commit()
+        await self.db.refresh(campaign)
+        return campaign
+
+    async def unarchive_campaign(self, campaign_id: str) -> Optional[Campaign]:
+        result = await self.db.execute(
+            select(Campaign).where(Campaign.campaign_id == campaign_id)
+        )
+        campaign = result.scalar_one_or_none()
+        
+        if not campaign:
+            return None
+
+        campaign.archived = False
+        campaign.archived_at = None
         
         await self.db.commit()
         await self.db.refresh(campaign)
