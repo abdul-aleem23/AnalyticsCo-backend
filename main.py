@@ -66,15 +66,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS - Explicit production domains for security
 allowed_origins = ["*"] if settings.environment == "development" else [
-    settings.base_url,
-    "http://localhost:3000",
-    "http://localhost:5173", 
-    "http://localhost:5174",
-    "https://localhost:3000",
-    "https://localhost:5173",
-    "https://localhost:5174"
+    "https://thepostingco-analytics.netlify.app",  # Production frontend
+    "http://localhost:3000",   # Local development
+    "http://localhost:5173",   # Vite dev server
+    "http://localhost:5174",   # Vite alternative port
 ]
 
 app.add_middleware(
