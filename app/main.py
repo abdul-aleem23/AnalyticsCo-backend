@@ -11,7 +11,9 @@ app = FastAPI(
 
 # Configure CORS
 
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+# Read allowed origins from environment (comma-separated)
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
+ALLOWED_ORIGINS = [origin.strip() for origin in allowed_origins_env.split(",")]
 
 
 app.add_middleware(
