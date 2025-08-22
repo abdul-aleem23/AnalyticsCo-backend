@@ -10,11 +10,18 @@ app = FastAPI(
 )
 
 # Configure CORS
+
+# Dev + Prod allowed origins
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Vite dev server
+    os.getenv("VITE_API_URL", "https://thepostingco-analytics.netlify.app")  # prod frontend
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
