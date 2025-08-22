@@ -11,11 +11,8 @@ app = FastAPI(
 
 # Configure CORS
 
-# Dev + Prod allowed origins
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite dev server
-    os.getenv("VITE_API_URL", "https://thepostingco-analytics.netlify.app")  # prod frontend
-]
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
 
 app.add_middleware(
     CORSMiddleware,
