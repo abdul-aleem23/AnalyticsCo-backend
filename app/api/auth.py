@@ -101,28 +101,3 @@ async def create_initial_admin(db: AsyncSession):
         db.add(admin_user)
         await db.commit()
         print(f"Initial admin user created: {settings.admin_email}")
-    else:
-        print(f"Admin user already exists: {existing_admin[0].email}")
-
-# Temporary endpoint to reset admin password (remove after use)
-@router.post("/admin/reset-password-temp")
-async def reset_admin_password_temp(
-    new_password: str,
-    db: AsyncSession = Depends(get_database)
-):
-    """Temporary endpoint to reset admin password. Remove after use!"""
-    result = await db.execute(select(AdminUser))
-    admin_user = result.scalar_one_or_none()
-
-    if not admin_user:
-        raise HTTPException(status_code=404, detail="No admin user found")
-
-    # Update password
-    admin_user.password_hash = get_password_hash(new_password)
-    await db.commit()
-
-    return {
-        "message": "Admin password updated successfully",
-        "email": admin_user.email,
-        "note": "Remove this endpoint after use!"
-    }

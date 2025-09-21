@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     company_name: str = os.getenv("COMPANY_NAME", "Your Marketing Agency")
     privacy_email: str = os.getenv("PRIVACY_EMAIL", "privacy@example.com")
     
+    # CORS configuration
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 24
     
